@@ -1,0 +1,10 @@
+
+python-chess
+openai
+transformers
+torch
+python-dotenv
+fastapi
+uvicorn
+pydantic
+huggingface_hub

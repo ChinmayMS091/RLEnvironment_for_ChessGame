@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+chess_training_states.json
+.env
+.env

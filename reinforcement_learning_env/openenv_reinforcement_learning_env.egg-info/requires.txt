@@ -1,0 +1,11 @@
+openenv-core[core]>=0.2.2
+python-chess>=1.999
+huggingface_hub
+transformers
+torch
+python-dotenv
+openai
+
+[dev]
+pytest>=8.0.0
+pytest-cov>=4.0.0

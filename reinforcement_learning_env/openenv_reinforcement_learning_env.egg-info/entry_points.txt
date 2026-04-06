@@ -1,0 +1,2 @@
+[console_scripts]
+server = reinforcement_learning_env.server.app:main
