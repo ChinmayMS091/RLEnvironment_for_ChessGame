@@ -62,7 +62,7 @@ load_dotenv()
 warnings.filterwarnings("ignore")
 transformer_logging.set_verbosity_error()
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000/v1")
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:7860/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt2")
 HF_TOKEN = os.getenv("HF_TOKEN", "not-set")
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME", "chess-rl-env")
@@ -142,7 +142,7 @@ def run_benchmark():
     final_success = False
     
     try:
-        with ReinforcementLearningEnv(base_url="http://localhost:8000").sync() as env:
+        with ReinforcementLearningEnv(base_url="http://localhost:7860").sync() as env:
             step_result = env.reset(task_idx=0)
             obs = step_result.observation
             
@@ -160,19 +160,22 @@ def run_benchmark():
                 
                 # [STEP] Compliance
                 done_bool = "true" if step_result.done or step_count >= 30 else "false"
-                print(f"[STEP] Step={step_count} Action={action_str} Reward={reward:.2f} Done={done_bool}")
+                # Extract error if present
+                error_msg = obs.metadata.get("error", "null") if hasattr(obs, 'metadata') and obs.metadata and "error" in obs.metadata else "null"
+                print(f"[STEP] step={step_count} action={action_str} reward={reward:.2f} done={done_bool} error={error_msg}")
                 
                 if DEBUG:
                     print("-" * 20 + f"\n{chess.Board(obs.board_fen)}\n" + "-" * 20)
                 
         final_success = (sum(rewards_list) > 0)
-    except Exception:
-        pass
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
     
     # [END] Compliance (MANDATORY FIELDS: success, steps, score, rewards)
     final_score = 1.0 if final_success else 0.0
-    rew_str = ",".join([f"{r:.2f}" for r in rewards_list])
-    print(f"[END] Success={'true' if final_success else 'false'} Steps={step_count}")
+    rew_str = ",".join([f"{r:.2f}" for r in rewards_list]) if rewards_list else "0.00"
+    print(f"[END] success={'true' if final_success else 'false'} steps={step_count} score={final_score:.2f} rewards={rew_str}")
 
     if DEBUG:
         print("\n" + "="*30 + f"\nMATCH COMPLETED\nTotal Reward Sum: {sum(rewards_list):.2f}\n" + "="*30)

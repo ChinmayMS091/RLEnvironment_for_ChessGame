@@ -40,7 +40,7 @@ Respond ONLY with the UCI move string (e.g. 'e2e4').
         return random.choice(legal_moves)
 
 def run_baseline():
-    base_url = "http://localhost:8000"
+    base_url = "http://localhost:7860"
     results = []
 
     try:

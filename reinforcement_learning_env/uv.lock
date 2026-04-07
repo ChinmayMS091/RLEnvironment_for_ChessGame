@@ -1873,6 +1873,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "huggingface-hub" },
+    { name = "openai" },
     { name = "openenv-core", extra = ["core"] },
     { name = "python-chess" },
     { name = "python-dotenv" },
@@ -1889,6 +1890,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "huggingface-hub" },
+    { name = "openai" },
     { name = "openenv-core", extras = ["core"], specifier = ">=0.2.2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },

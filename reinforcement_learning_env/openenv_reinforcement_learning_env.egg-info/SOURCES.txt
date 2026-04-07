@@ -1,10 +1,12 @@
 README.md
 __init__.py
 analyze_env.py
+baseline_inference.py
 client.py
 inference.py
 models.py
 pyproject.toml
+tasks.py
 test_env.py
 ./__init__.py
 ./analyze_env.py
