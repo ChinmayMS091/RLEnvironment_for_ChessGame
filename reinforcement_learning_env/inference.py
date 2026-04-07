@@ -173,7 +173,7 @@ def run_benchmark():
         traceback.print_exc()
     
     # [END] Compliance (MANDATORY FIELDS: success, steps, score, rewards)
-    final_score = 1.0 if final_success else 0.0
+    final_score = 0.99 if final_success else 0.01
     rew_str = ",".join([f"{r:.2f}" for r in rewards_list]) if rewards_list else "0.00"
     print(f"[END] success={'true' if final_success else 'false'} steps={step_count} score={final_score:.2f} rewards={rew_str}")
 

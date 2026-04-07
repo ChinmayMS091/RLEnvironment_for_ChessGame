@@ -166,6 +166,7 @@ class ReinforcementLearningEnvironment(Environment):
         metadata = metadata or {}
         if done:
             metadata["task_name"] = self.current_task.name
+            metadata["task_score"] = self.current_task.score(self._board)
 
         return ReinforcementLearningObservation(
             board_fen=self._board.fen(),

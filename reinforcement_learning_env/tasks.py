@@ -35,14 +35,15 @@ class ChessTask:
             
             # ASIGN SUCCESS BASED ON ANALYSIS
             # If current move/state is better than average, we give success!
+            # Score must be STRICTLY between 0 and 1
             if current_strength > max_reward:
-                return 1.0 # NEW RECORD!
+                return 0.99 # NEW RECORD!
             elif current_strength > avg_reward:
-                return 0.7 # Better than average
+                return 0.70 # Better than average
             else:
-                return 0.1 # Still learning
+                return 0.10 # Still learning
         except:
-            return 0.0
+            return 0.01
 
     def calculate_strength(self, board: chess.Board):
         # Basic piece values
@@ -62,4 +63,31 @@ class SelfImprovementTask(ChessTask):
             goal_description="Exceed the average performance points stored in your training history."
         )
 
-TASKS = [SelfImprovementTask()]
+class EndgameTask(ChessTask):
+    def __init__(self):
+        super().__init__(
+            fen="8/8/8/8/8/3k4/8/3KQ3 w - - 0 1",
+            name="Endgame Checkmate",
+            difficulty="medium",
+            goal_description="Optimize piece movement in an endgame scenario."
+        )
+
+class OpeningTask(ChessTask):
+    def __init__(self):
+        super().__init__(
+            fen="r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
+            name="Italian Game Opening",
+            difficulty="easy",
+            goal_description="Continue strongly from the Italian Game."
+        )
+
+class MidgameTacticalTask(ChessTask):
+    def __init__(self):
+        super().__init__(
+            fen="r1bq1rk1/ppp2ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQ - 4 6",
+            name="Midgame Tactics",
+            difficulty="medium",
+            goal_description="Gain a tactical advantage in the midgame."
+        )
+
+TASKS = [SelfImprovementTask(), EndgameTask(), OpeningTask(), MidgameTacticalTask()]
