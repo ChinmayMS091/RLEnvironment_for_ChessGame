@@ -106,6 +106,8 @@ pip install -e .
 2.  **Execute the Agent Training**:
     ```cmd
     .venv\Scripts\python.exe inference.py
+    or
+    .venv\Scripts\python.exe inference.py --reset
     ```
 
 ---

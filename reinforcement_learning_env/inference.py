@@ -129,53 +129,61 @@ def predict_move(board_fen, legal_moves):
 
 # 4. MAIN TASK LOOP
 def run_benchmark():
-    # RESET SYSTEM
-    if LEARNING_FILE.exists():
-        if input("\n>>> Reset Memory (clear training data)? [y/N]: ").strip().lower() == 'y':
-            LEARNING_FILE.unlink()
-            print("Memory Cleared.")
+    import sys
+    if "--reset" in sys.argv and LEARNING_FILE.exists():
+        LEARNING_FILE.unlink()
+        print("Memory Cleared.")
 
-    # [START] Compliance
-    print(f"[START] task=FullBoardMatch env=Chess-RL-v1 model={MODEL_NAME}")
-    
-    rewards_list, step_count = [], 0
-    final_success = False
-    
     try:
         with ReinforcementLearningEnv(base_url="http://localhost:7860").sync() as env:
-            step_result = env.reset(task_idx=0)
-            obs = step_result.observation
-            
-            while not step_result.done and step_count < 30:
-                step_count += 1
-                current_fen = obs.board_fen
-                action_str, _ = predict_move(current_fen, obs.legal_moves)
-                
-                step_result = env.step(ReinforcementLearningAction(move_uci=action_str))
+            for task_idx in range(4):
+                step_result = env.reset(task_idx=task_idx)
                 obs = step_result.observation
                 
-                reward = float(step_result.reward or 0.0)
-                rewards_list.append(reward)
-                update_learning(current_fen, action_str, reward)
+                # [START] Compliance
+                task_name = "Task-" + str(task_idx)
+                if hasattr(obs, 'metadata') and obs.metadata and "message" in obs.metadata:
+                    msg = obs.metadata["message"]
+                    task_name = msg.replace("Reset to task: ", "").split(" (")[0].replace(" ", "_")
                 
-                # [STEP] Compliance
-                done_bool = "true" if step_result.done or step_count >= 30 else "false"
-                # Extract error if present
-                error_msg = obs.metadata.get("error", "null") if hasattr(obs, 'metadata') and obs.metadata and "error" in obs.metadata else "null"
-                print(f"[STEP] step={step_count} action={action_str} reward={reward:.2f} done={done_bool} error={error_msg}")
+                print(f"[START] task={task_name} env=Chess-RL-v1 model={MODEL_NAME}")
                 
-                if DEBUG:
-                    print("-" * 20 + f"\n{chess.Board(obs.board_fen)}\n" + "-" * 20)
+                rewards_list, step_count = [], 0
+                final_success = False
                 
-        final_success = (sum(rewards_list) > 0)
+                while not step_result.done and step_count < 30:
+                    step_count += 1
+                    current_fen = obs.board_fen
+                    action_str, _ = predict_move(current_fen, obs.legal_moves)
+                    
+                    step_result = env.step(ReinforcementLearningAction(move_uci=action_str))
+                    obs = step_result.observation
+                    
+                    reward = float(step_result.reward or 0.0)
+                    rewards_list.append(reward)
+                    update_learning(current_fen, action_str, reward)
+                    
+                    # [STEP] Compliance
+                    done_bool = "true" if step_result.done or step_count >= 30 else "false"
+                    error_msg = obs.metadata.get("error", "null") if hasattr(obs, 'metadata') and obs.metadata and "error" in obs.metadata else "null"
+                    print(f"[STEP] step={step_count} action={action_str} reward={reward:.2f} done={done_bool} error={error_msg}")
+                    
+                    if DEBUG:
+                        print("-" * 20 + f"\n{chess.Board(obs.board_fen)}\n" + "-" * 20)
+                
+                final_success = (sum(rewards_list) > 0)
+                
+                # [END] Compliance (MANDATORY FIELDS: success, steps, score, rewards)
+                final_score = float(obs.metadata.get("task_score", 0.01)) if hasattr(obs, 'metadata') and obs.metadata and "task_score" in obs.metadata else 0.01
+                if final_score <= 0.0: final_score = 0.01
+                if final_score >= 1.0: final_score = 0.99
+                
+                rew_str = ",".join([f"{r:.2f}" for r in rewards_list]) if rewards_list else "0.00"
+                print(f"[END] success={'true' if final_success else 'false'} steps={step_count} score={final_score:.2f} rewards={rew_str}")
+                
     except Exception as e:
         import traceback
         traceback.print_exc()
-    
-    # [END] Compliance (MANDATORY FIELDS: success, steps, score, rewards)
-    final_score = 0.99 if final_success else 0.01
-    rew_str = ",".join([f"{r:.2f}" for r in rewards_list]) if rewards_list else "0.00"
-    print(f"[END] success={'true' if final_success else 'false'} steps={step_count} score={final_score:.2f} rewards={rew_str}")
 
     if DEBUG:
         print("\n" + "="*30 + f"\nMATCH COMPLETED\nTotal Reward Sum: {sum(rewards_list):.2f}\n" + "="*30)
