@@ -14,45 +14,72 @@ class ChessTask:
         self.goal_description = goal_description
 
     def score(self, board: chess.Board) -> float:
-        """This will now analyze training data to assign success."""
-        # Calculate current board strength (Material + Position)
-        current_strength = self.calculate_strength(board)
-        
-        # Pull history to see if we improved
+        """
+        Evaluate the agent's performance based on:
+        1. Material advantage at end of episode
+        2. Improvement over historical training runs
+        3. Game outcome (checkmate, draw, etc.)
+        """
+        # Start with material-based score
+        material_score = self.calculate_strength(board)
+
+        # Check for game-ending conditions
+        if board.is_checkmate():
+            # Who won?
+            if board.turn == chess.BLACK:  # White delivered checkmate
+                return 0.99
+            else:
+                return 0.05  # We got checkmated
+
+        if board.is_stalemate() or board.is_insufficient_material():
+            return 0.40  # Draw is okay but not great
+
+        # Pull history to measure improvement
         if not HISTORY_PATH.exists():
-            return 0.5 # Initial neutral score
-        
+            return max(0.10, min(0.90, material_score))
+
         try:
             with open(HISTORY_PATH, "r") as f:
                 history = json.load(f)
-            
-            # Extract previous rewards to find the 'Benchmark'
-            rewards = [h.get('reward', 0) for h in history if isinstance(h, dict)]
-            if not rewards: return 0.5
-            
-            avg_reward = sum(rewards) / len(rewards)
-            max_reward = max(rewards)
-            
-            # ASIGN SUCCESS BASED ON ANALYSIS
-            # If current move/state is better than average, we give success!
-            # Score must be STRICTLY between 0 and 1
-            if current_strength > max_reward:
-                return 0.99 # NEW RECORD!
-            elif current_strength > avg_reward:
-                return 0.70 # Better than average
-            else:
-                return 0.10 # Still learning
-        except:
-            return 0.01
 
-    def calculate_strength(self, board: chess.Board):
-        # Basic piece values
+            # Calculate average total reward per episode (group by ~30 steps)
+            rewards = [h.get('reward', 0) for h in history if isinstance(h, dict)]
+            if not rewards:
+                return max(0.10, min(0.90, material_score))
+
+            # Use the total cumulative reward as the benchmark
+            total_reward = sum(rewards)
+            num_episodes = max(1, len(rewards) // 30)  # ~30 steps per episode
+            avg_episode_reward = total_reward / num_episodes
+
+            # Score based on material advantage + learning trajectory
+            # Material score: normalize to 0-1 range (max theoretical advantage ~39)
+            normalized_material = max(0.0, min(1.0, (material_score + 20) / 40.0))
+
+            # Learning bonus: reward if we're improving
+            learning_bonus = 0.0
+            if len(rewards) > 60:  # At least 2 episodes of data
+                mid = len(rewards) // 2
+                early_avg = sum(rewards[:mid]) / mid
+                recent_avg = sum(rewards[mid:]) / (len(rewards) - mid)
+                if recent_avg > early_avg:
+                    learning_bonus = 0.15  # Agent is improving!
+
+            final_score = min(0.99, max(0.01, normalized_material * 0.7 + learning_bonus + 0.15))
+            return round(final_score, 4)
+
+        except Exception:
+            return max(0.10, min(0.90, material_score))
+
+    def calculate_strength(self, board: chess.Board) -> float:
+        """Calculate normalized material advantage (0.0 to 1.0 scale)."""
         values = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9}
-        score = 0
+        raw_score = 0
         for pt, val in values.items():
-            score += len(board.pieces(pt, chess.WHITE)) * val
-            score -= len(board.pieces(pt, chess.BLACK)) * val
-        return score
+            raw_score += len(board.pieces(pt, chess.WHITE)) * val
+            raw_score -= len(board.pieces(pt, chess.BLACK)) * val
+        # Normalize: raw_score ranges roughly -39 to +39, map to 0.0-1.0
+        return max(0.0, min(1.0, (raw_score + 20) / 40.0))
 
 class SelfImprovementTask(ChessTask):
     def __init__(self):
@@ -66,10 +93,10 @@ class SelfImprovementTask(ChessTask):
 class EndgameTask(ChessTask):
     def __init__(self):
         super().__init__(
-            fen="8/8/8/8/8/3k4/8/3KQ3 w - - 0 1",
-            name="Endgame Checkmate",
-            difficulty="medium",
-            goal_description="Optimize piece movement in an endgame scenario."
+            fen="8/p4pkp/1p4p1/2r5/8/1P3RP1/P4P1P/6K1 w - - 0 1",
+            name="Rook and Pawn Endgame",
+            difficulty="hard",
+            goal_description="Navigate a realistic rook and pawn endgame to gain an advantage."
         )
 
 class OpeningTask(ChessTask):
@@ -90,4 +117,4 @@ class MidgameTacticalTask(ChessTask):
             goal_description="Gain a tactical advantage in the midgame."
         )
 
-TASKS = [SelfImprovementTask(), EndgameTask(), OpeningTask(), MidgameTacticalTask()]
+TASKS = [SelfImprovementTask(), OpeningTask(), EndgameTask(), MidgameTacticalTask()]
